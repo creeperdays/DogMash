@@ -28,14 +28,19 @@ def create_app():
     @app.route('/')
     def hello():
         elo.InsertImages()
+        session['picks'] = 0
         return render_template('buttons.html')
     
     @app.route('/play', methods = ('GET', 'POST'))
     def play():
+
+        if session.get('picks') == 10: 
+            return redirect(url_for('finish'))
+
         if request.method == 'POST':
             db = get_db()
-
-            if request.form['Image'] == session.get('Image1'):
+            session['picks'] = session.get('picks') + 1
+            if request.form['Image'] == 'Image1':
                 image1 = db.execute(
                     'SELECT * FROM images WHERE link = ?', (session.get('Image1'),)
                 ).fetchone()
@@ -71,14 +76,15 @@ def create_app():
                 ).fetchone() 
                 link1 = image1['link']
                 link2 = image2['link']
-                session.clear()
+                #session.clear()
                 session['Image1'] = image1['link']
                 session['Image2'] = image2['link']
-                return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'])
+                return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'], picks = session.get('picks'))
 
                 
             
-            elif request.form['Image'] == session.get('Image2'):
+            elif request.form['Image'] == 'Image2':
+                
                 image1 = db.execute(
                     'SELECT * FROM images WHERE link = ?', (session.get('Image1'),)
                 ).fetchone()
@@ -112,10 +118,10 @@ def create_app():
                 ).fetchone() 
                 link1 = image1['link']
                 link2 = image2['link']
-                session.clear()
+                #session.clear()
                 session['Image1'] = image1['link']
                 session['Image2'] = image2['link']
-                return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'])
+                return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'], picks = session.get('picks'))
 
 
         db = get_db()
@@ -142,18 +148,36 @@ def create_app():
 
         link2 = image2['link']
 
-        session.clear()
+        #session.clear()
 
         session['Image1'] = image1['link']
         session['Image2'] = image2['link']
 
 
 
-        return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'])
+        return render_template('Play.html', Image1 = link1, Image2 = link2, elo1 = image1['elo'], elo2 = image2['elo'], picks = session.get('picks'))
     
     @app.route('/rules')
     def rules():
         return render_template('Rules.html')
+    
+
+    @app.route('/finish')
+    def finish():
+        db = get_db()
+
+        images = db.execute(
+            'SELECT * FROM images ORDER BY elo DESC'
+        ).fetchall()
+
+        cutest = images[0]
+
+        link = cutest['link']
+
+
+        return render_template('end.html', Image = link, images = images)
+
+
 
     return app
 
